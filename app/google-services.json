@@ -1,0 +1,48 @@
+{
+  "project_info": {
+    "project_number": "602434668112",
+    "project_id": "moviles20262-36569",
+    "storage_bucket": "moviles20262-36569.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:602434668112:android:01c3ab2e7101c176ecb355",
+        "android_client_info": {
+          "package_name": "com.example.app_clon_mercado_libre"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDb5a9Dkp8KZ7XeT1Vch7z1-HaebfEAlxc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:602434668112:android:f1002f4dd0826b34ecb355",
+        "android_client_info": {
+          "package_name": "com.example.futbolapp"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDb5a9Dkp8KZ7XeT1Vch7z1-HaebfEAlxc"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -95,6 +95,9 @@ fun MainNavigation() {
                 },
                 onNavigateToPurchases = {
                     navController.navigate("purchases")
+                },
+                onNavigateToCategories = {
+                    navController.navigate("categories")
                 }
             )
         }
@@ -111,6 +114,9 @@ fun MainNavigation() {
                 },
                 onNavigateToPurchases = {
                     navController.navigate("purchases")
+                },
+                onNavigateToCategories = {
+                    navController.navigate("categories")
                 }
             )
         }
@@ -127,15 +133,22 @@ fun MainNavigation() {
                 },
                 onNavigateToCategories = {
                     navController.navigate("categories")
+                },
+                onLogout = {
+                    navController.navigate("login") {
+                        popUpTo(0) { inclusive = true }
+                    }
                 }
             )
         }
         composable("categories") {
-            CategoriesScreen(onNavigateBack = { navController.popBackStack() })
+            CategoriesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToHome = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
+                onNavigateToPurchases = { navController.navigate("purchases") },
+                onNavigateToProfile = { navController.navigate("profile") }
+            )
         }
-
-
-
 
         composable("purchases") {
             PurchasesScreen(
@@ -151,7 +164,10 @@ fun MainNavigation() {
                 onNavigateToFavorites = {
                     navController.navigate("favorites")
                 },
-                onNavigateToPurchases = { }
+                onNavigateToPurchases = { },
+                onNavigateToCategories = {
+                    navController.navigate("categories")
+                }
             )
         }
         composable(
@@ -173,6 +189,9 @@ fun MainNavigation() {
                 },
                 onNavigateToPurchases = {
                     navController.navigate("purchases")
+                },
+                onNavigateToCategories = {
+                    navController.navigate("categories")
                 }
             )
         }
@@ -205,7 +224,8 @@ fun MainNavigation() {
                 onNavigateToHome = { navController.navigate("home") },
                 onNavigateToProfile = { navController.navigate("profile") },
                 onNavigateToFavorites = { navController.navigate("favorites") },
-                onNavigateToPurchases = { navController.navigate("purchases") }
+                onNavigateToPurchases = { navController.navigate("purchases") },
+                onNavigateToCategories = { navController.navigate("categories") }
             )
         }
 

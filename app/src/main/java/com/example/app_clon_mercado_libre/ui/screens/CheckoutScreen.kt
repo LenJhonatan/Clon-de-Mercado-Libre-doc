@@ -35,7 +35,8 @@ fun CheckoutScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToFavorites: () -> Unit,
-    onNavigateToPurchases: () -> Unit
+    onNavigateToPurchases: () -> Unit,
+    onNavigateToCategories: () -> Unit = {}
 ) {
     var selectedPayment by remember { mutableStateOf("Yape") }
     val product = ProductRepository.getProductById(productId)
@@ -98,20 +99,20 @@ fun CheckoutScreen(
                         onClick = onNavigateToHome
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Outlined.FavoriteBorder, null) },
-                        label = { Text("Favorites", fontSize = 10.sp) },
+                        icon = { Icon(Icons.Outlined.GridView, null) },
+                        label = { Text("Categorías", fontSize = 10.sp) },
                         selected = false,
-                        onClick = onNavigateToFavorites
+                        onClick = onNavigateToCategories
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Outlined.ShoppingBag, null, tint = MLBlue) },
-                        label = { Text("Purchases", color = MLBlue, fontSize = 10.sp) },
+                        icon = { Icon(Icons.Outlined.ShoppingCart, null, tint = MLBlue) },
+                        label = { Text("Carrito", color = MLBlue, fontSize = 10.sp) },
                         selected = true,
                         onClick = onNavigateToPurchases
                     )
                     NavigationBarItem(
-                        icon = { Icon(Icons.Outlined.Notifications, null) },
-                        label = { Text("Notifications", fontSize = 10.sp) },
+                        icon = { Icon(Icons.Outlined.PlayCircle, null) },
+                        label = { Text("Videos", fontSize = 10.sp) },
                         selected = false,
                         onClick = { }
                     )

@@ -11,9 +11,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.FavoriteBorder
+import androidx.compose.material.icons.outlined.GridView
 import androidx.compose.material.icons.outlined.Notifications
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Share
-import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -39,7 +41,8 @@ fun ProductDetailScreen(
     onNavigateToFavorites: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToAddress: (String) -> Unit,
-    onNavigateToPurchases: () -> Unit
+    onNavigateToPurchases: () -> Unit,
+    onNavigateToCategories: () -> Unit = {}
 ) {
     var selectedColor by remember { mutableStateOf("Negro") }
     var quantity by remember { mutableStateOf(1) }
@@ -67,7 +70,7 @@ fun ProductDetailScreen(
                 },
                 actions = {
                     IconButton(onClick = { }) { Icon(Icons.Default.Search, contentDescription = "Buscar", tint = MLBlack) }
-                    IconButton(onClick = { }) { Icon(Icons.Default.ShoppingCart, contentDescription = "Carrito", tint = MLBlack) }
+                    IconButton(onClick = { }) { Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones", tint = MLBlack) }
                     IconButton(onClick = { }) { Icon(Icons.Outlined.Share, contentDescription = "Compartir", tint = MLBlack) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MLYellow)
@@ -82,20 +85,20 @@ fun ProductDetailScreen(
                     onClick = onNavigateBack
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.FavoriteBorder, null) }, 
-                    label = { Text("Favoritos", fontSize = 10.sp) }, 
+                    icon = { Icon(Icons.Outlined.GridView, null) }, 
+                    label = { Text("Categorías", fontSize = 10.sp) }, 
                     selected = false, 
-                    onClick = onNavigateToFavorites
+                    onClick = onNavigateToCategories
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.ShoppingBag, null) }, 
-                    label = { Text("Compras", fontSize = 10.sp) }, 
+                    icon = { Icon(Icons.Outlined.ShoppingCart, null) }, 
+                    label = { Text("Carrito", fontSize = 10.sp) }, 
                     selected = false, 
                     onClick = onNavigateToPurchases
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.Notifications, null) }, 
-                    label = { Text("Notificaciones", fontSize = 10.sp) }, 
+                    icon = { Icon(Icons.Outlined.PlayCircle, null) }, 
+                    label = { Text("Videos", fontSize = 10.sp) }, 
                     selected = false, 
                     onClick = { }
                 )
@@ -141,8 +144,8 @@ fun ProductDetailScreen(
                         fontSize = 18.sp,
                         fontWeight = FontWeight.Normal,
                         modifier = Modifier.weight(1f),
-                        lineHeight = 22.sp
-                        //color = Color.Black
+                        lineHeight = 22.sp,
+                        color = Color.Black
                     )
                     IconButton(onClick = { 
                         product?.let { 
@@ -165,7 +168,7 @@ fun ProductDetailScreen(
                     repeat(5) {
                         Icon(Icons.Default.Star, null, tint = MLBlue, modifier = Modifier.size(16.dp))
                     }
-                    Text(" 5.0 | +5 vendidos", fontSize = 14.sp, color = MLGray)
+                    Text(" 5.0 | +5 vendidos", fontSize = 14.sp, color = Color.Black)
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -176,7 +179,7 @@ fun ProductDetailScreen(
                     color = Color.Red,
                     textDecoration = TextDecoration.LineThrough
                 )
-                Text(text = price, fontSize = 32.sp, fontWeight = FontWeight.Bold)   //,color = Color.Black
+                Text(text = price, fontSize = 32.sp, fontWeight = FontWeight.Bold,color = Color.Black)   //,color = Color.Black
                 Text("6 cuotas de S/ 24.83 sin interés", color = Color(0xFF00A650), fontSize = 16.sp)  //(0xFF00A650)
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -218,7 +221,7 @@ fun ProductDetailScreen(
                 Spacer(modifier = Modifier.height(24.dp))
 
                 // Colores
-                Text("Colores: $selectedColor", fontWeight = FontWeight.Bold )   //, color = Color.Black
+                Text("Colores: $selectedColor", fontWeight = FontWeight.Bold, color = Color.Black )   //, color = Color.Black
                 Row(modifier = Modifier.padding(vertical = 8.dp)) {
                     ColorOption(productImage, isSelected = selectedColor == "Negro") { selectedColor = "Negro" }
                     Spacer(modifier = Modifier.width(8.dp))
@@ -247,7 +250,7 @@ fun ProductDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "Cantidad: $quantity", fontWeight = FontWeight.Bold )   //, color = Color.Black
+                        Text(text = "Cantidad: $quantity", fontWeight = FontWeight.Bold, color = Color.Black )   //, color = Color.Black
                         Text("(+5 disponibles)", color = MLGray, fontSize = 12.sp)   //
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MLBlue)
                     }

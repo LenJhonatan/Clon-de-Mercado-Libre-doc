@@ -10,8 +10,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.Favorite
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -29,7 +30,8 @@ fun FavoritesScreen(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToProfile: () -> Unit,
-    onNavigateToPurchases: () -> Unit
+    onNavigateToPurchases: () -> Unit,
+    onNavigateToCategories: () -> Unit = {}
 ) {
     val favoriteProducts = ProductRepository.products.filter { 
         ProductRepository.favorites.contains(it.id) 
@@ -51,20 +53,20 @@ fun FavoritesScreen(
                     onClick = onNavigateToHome
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.Favorite, null, tint = MLBlue) },
-                    label = { Text("Favorites", color = MLBlue, fontSize = 10.sp) },
-                    selected = true,
-                    onClick = { }
+                    icon = { Icon(Icons.Outlined.GridView, null) },
+                    label = { Text("Categorías", fontSize = 10.sp) },
+                    selected = false,
+                    onClick = onNavigateToCategories
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.ShoppingBag, null) },
-                    label = { Text("Purchases", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.ShoppingCart, null) },
+                    label = { Text("Carrito", fontSize = 10.sp) },
                     selected = false,
                     onClick = onNavigateToPurchases
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.Notifications, null) },
-                    label = { Text("Notifications", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.PlayCircle, null) },
+                    label = { Text("Videos", fontSize = 10.sp) },
                     selected = false,
                     onClick = { }
                 )

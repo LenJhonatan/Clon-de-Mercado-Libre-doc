@@ -40,7 +40,8 @@ fun HomeScreen(
     onNavigateToDetail: (String) -> Unit,
     onNavigateToFavorites: () -> Unit,
     onNavigateToProfile: () -> Unit,
-    onNavigateToPurchases: () -> Unit
+    onNavigateToPurchases: () -> Unit,
+    onNavigateToCategories: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
@@ -101,7 +102,7 @@ fun HomeScreen(
                         }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
-                    Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = MLBlack)
+                    Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones", tint = MLBlack)
                 }
                 
                 Spacer(modifier = Modifier.height(8.dp))
@@ -118,31 +119,33 @@ fun HomeScreen(
             NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Home, contentDescription = null, tint = MLBlue) },
-                    label = { Text("Home", color = MLBlue, fontSize = 10.sp) },
+                    label = { Text("Inicio", color = Color.Black, fontSize = 10.sp) },
+
                     selected = true,
                     onClick = { }
+
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.FavoriteBorder, contentDescription = null) },
-                    label = { Text("Favorites", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.GridView, contentDescription = null) },
+                    label = { Text("Categorias", color = Color.Black, fontSize = 10.sp) },
                     selected = false,
-                    onClick = onNavigateToFavorites
+                    onClick = onNavigateToCategories
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.ShoppingBag, contentDescription = null) },
-                    label = { Text("Purchases", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.ShoppingCart, contentDescription = null) },
+                    label = { Text("Carrito",color = Color.Black, fontSize = 10.sp) },
                     selected = false,
                     onClick = onNavigateToPurchases
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.Notifications, contentDescription = null) },
-                    label = { Text("Notifications", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.PlayCircle, contentDescription = null) },
+                    label = { Text("Videos", color = Color.Black, fontSize = 10.sp) },
                     selected = false,
                     onClick = { }
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Default.Menu, contentDescription = null) },
-                    label = { Text("More", fontSize = 10.sp) },
+                    label = { Text("Más",color = Color.Black, fontSize = 10.sp) },
                     selected = false,
                     onClick = onNavigateToProfile
                 )

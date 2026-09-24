@@ -8,6 +8,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.outlined.Notifications
 import androidx.compose.material.icons.outlined.Visibility
 import androidx.compose.material.icons.outlined.VisibilityOff
 import androidx.compose.material3.*
@@ -68,11 +69,11 @@ fun PasswordScreen(
                     ) {
                         Icon(Icons.Default.Search, contentDescription = null, tint = MLGray, modifier = Modifier.size(18.dp))
                         Spacer(modifier = Modifier.width(8.dp))
-                        Text("Search in the store...", color = MLGray, fontSize = 14.sp)
+                        Text("Search in the store...", color = MLWhite, fontSize = 14.sp)
                     }
                 }
                 Spacer(modifier = Modifier.width(12.dp))
-                Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = MLBlack)
+                Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones", tint = MLBlack)
             }
         }
 

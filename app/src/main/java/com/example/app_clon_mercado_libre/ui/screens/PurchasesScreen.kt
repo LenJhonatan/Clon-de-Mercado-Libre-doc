@@ -11,8 +11,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.outlined.FavoriteBorder
-import androidx.compose.material.icons.outlined.Notifications
-import androidx.compose.material.icons.outlined.ShoppingBag
+import androidx.compose.material.icons.outlined.GridView
+import androidx.compose.material.icons.outlined.PlayCircle
+import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -34,14 +35,15 @@ fun PurchasesScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToFavorites: () -> Unit,
-    onNavigateToPurchases: () -> Unit
+    onNavigateToPurchases: () -> Unit,
+    onNavigateToCategories: () -> Unit = {}
 ) {
     val purchases = ProductRepository.purchases
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Mis compras", fontWeight = FontWeight.Bold) },
+                title = { Text("Mis compras", fontWeight = FontWeight.Bold, color = Color.Black)  },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MLYellow)
             )
         },
@@ -54,20 +56,20 @@ fun PurchasesScreen(
                     onClick = onNavigateToHome
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.FavoriteBorder, null) },
-                    label = { Text("Favorites", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.GridView, null) },
+                    label = { Text("Categorías", fontSize = 10.sp) },
                     selected = false,
-                    onClick = onNavigateToFavorites
+                    onClick = onNavigateToCategories
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.ShoppingBag, null, tint = MLBlue) },
-                    label = { Text("Purchases", color = MLBlue, fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.ShoppingCart, null, tint = MLBlue) },
+                    label = { Text("Carrito", color = MLBlue, fontSize = 10.sp) },
                     selected = true,
                     onClick = onNavigateToPurchases
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.Notifications, null) },
-                    label = { Text("Notifications", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.PlayCircle, null) },
+                    label = { Text("Videos", fontSize = 10.sp) },
                     selected = false,
                     onClick = { }
                 )

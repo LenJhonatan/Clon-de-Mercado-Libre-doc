@@ -1,5 +1,9 @@
 package com.example.app_clon_mercado_libre.ui.screens
 
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -13,6 +17,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.outlined.ExitToApp
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -23,15 +28,20 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.app_clon_mercado_libre.R
 import com.example.app_clon_mercado_libre.data.ProductRepository
 import com.example.app_clon_mercado_libre.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
+import com.google.firebase.firestore.SetOptions
+import com.google.firebase.storage.FirebaseStorage
+
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -39,12 +49,33 @@ fun ProfileScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToFavorites: () -> Unit,
     onNavigateToPurchases: () -> Unit,
-    onNavigateToCategories: () -> Unit
+    onNavigateToCategories: () -> Unit,
+    onLogout: () -> Unit = {}
 ) {
-    var userName by remember { mutableStateOf("Cargando...") }
+    val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
     val db = FirebaseFirestore.getInstance()
     val currentUser = auth.currentUser
+
+    var userName by remember { mutableStateOf("Cargando...") }
+    var userPhotoUrl by remember { mutableStateOf("") }
+    var nombreState by remember { mutableStateOf("") }
+    var apellidoState by remember { mutableStateOf("") }
+    var ciudadState by remember { mutableStateOf("") }
+    var telefonoState by remember { mutableStateOf("") }
+
+    var selectedImageUri by remember { mutableStateOf<Uri?>(null) }
+    var showLogoutDialog by remember { mutableStateOf(false) }
+    var showEditAccountDialog by remember { mutableStateOf(false) }
+    var isSavingAccount by remember { mutableStateOf(false) }
+
+    val imagePickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.GetContent()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            selectedImageUri = uri
+        }
+    }
 
     val favoriteProducts = ProductRepository.products.filter { 
         ProductRepository.favorites.contains(it.id) 
@@ -55,13 +86,56 @@ fun ProfileScreen(
         currentUser?.let { user ->
             db.collection("users").document(user.uid).get()
                 .addOnSuccessListener { document ->
-                    if (document != null) {
-                        val nombre = document.getString("nombre") ?: "Usuario"
+                    if (document != null && document.exists()) {
+                        val nombre = document.getString("nombre") ?: ""
+
                         val apellido = document.getString("apellido") ?: ""
-                        userName = "$nombre $apellido"
+                        val ciudad = document.getString("ciudad") ?: ""
+                        val telefono = document.getString("telefono") ?: ""
+                       /// val photoUrl = document.getString("photoUrl") ?: ""
+
+                        nombreState = nombre
+                        apellidoState = apellido
+                        ciudadState = ciudad
+                        telefonoState = telefono
+                        //userPhotoUrl = photoUrl
+
+                        val fullName = "$nombre $apellido".trim()
+                        userName = if (fullName.isNotEmpty()) fullName else (user.email ?: "Usuario")
+                    } else {
+                        userName = user.email ?: "Usuario"
                     }
                 }
+                .addOnFailureListener {
+                    userName = user.email ?: "Usuario"
+                }
         }
+    }
+
+    fun saveUserData() {
+        val user = currentUser ?: return
+        isSavingAccount = true
+
+        val userData = hashMapOf(
+            "nombre" to nombreState,
+            "apellido" to apellidoState,
+            "ciudad" to ciudadState,
+            "telefono" to telefonoState
+        )
+
+        db.collection("users").document(user.uid)
+            .set(userData, SetOptions.merge())
+            .addOnSuccessListener {
+                isSavingAccount = false
+                showEditAccountDialog = false
+                val fullName = "$nombreState $apellidoState".trim()
+                userName = if (fullName.isNotEmpty()) fullName else (user.email ?: "Usuario")
+                Toast.makeText(context, "Datos guardados correctamente", Toast.LENGTH_SHORT).show()
+            }
+            .addOnFailureListener { e ->
+                isSavingAccount = false
+                Toast.makeText(context, "Error al guardar en Firestore: ${e.message}", Toast.LENGTH_SHORT).show()
+            }
     }
 
     Scaffold(
@@ -92,7 +166,7 @@ fun ProfileScreen(
                         }
                     }
                     Spacer(modifier = Modifier.width(12.dp))
-                    Icon(Icons.Default.ShoppingCart, contentDescription = null, tint = MLBlack)
+                    Icon(Icons.Outlined.Notifications, contentDescription = "Notificaciones", tint = MLBlack)
                 }
             }
         },
@@ -105,20 +179,20 @@ fun ProfileScreen(
                     onClick = onNavigateToHome
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.FavoriteBorder, null) },
-                    label = { Text("Favorites", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.GridView, null) },
+                    label = { Text("Categorías", fontSize = 10.sp) },
                     selected = false,
-                    onClick = onNavigateToFavorites
+                    onClick = onNavigateToCategories
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.ShoppingBag, null) },
-                    label = { Text("Purchases", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.ShoppingCart, null) },
+                    label = { Text("Carrito", fontSize = 10.sp) },
                     selected = false,
                     onClick = onNavigateToPurchases
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.Notifications, null) },
-                    label = { Text("Notifications", fontSize = 10.sp) },
+                    icon = { Icon(Icons.Outlined.PlayCircle, null) },
+                    label = { Text("Videos", fontSize = 10.sp) },
                     selected = false,
                     onClick = { }
                 )
@@ -140,26 +214,43 @@ fun ProfileScreen(
         ) {
             // User Header
             Surface(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { showEditAccountDialog = true },
                 color = Color.White
             ) {
                 Row(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    // Profile Image (Placeholder)
+                    // Profile Image Avatar
                     Box(
                         modifier = Modifier
                             .size(60.dp)
+                            .clip(CircleShape)
                             .background(Color.LightGray, CircleShape),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(40.dp), tint = Color.White)
+                        if (userPhotoUrl.isNotEmpty()) {
+                            AsyncImage(
+                                model = userPhotoUrl,
+                                contentDescription = "Foto de perfil",
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .clip(CircleShape),
+                                contentScale = ContentScale.Crop
+                            )
+                        } else {
+                            Icon(Icons.Default.Person, contentDescription = null, modifier = Modifier.size(40.dp), tint = Color.White)
+                        }
                     }
                     Spacer(modifier = Modifier.width(16.dp))
                     Column(modifier = Modifier.weight(1f)) {
                         Text(text = userName, fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text(text = "Nivel 4 - Mercado Puntos", fontSize = 14.sp, color = MLGray)
+                        if (ciudadState.isNotEmpty()) {
+                            Text(text = ciudadState, fontSize = 13.sp, color = MLBlue)
+                        }
+                        Text(text = "Nivel 4 - Mercado Puntos", fontSize = 13.sp, color = MLGray)
                     }
                     Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MLGray)
                 }
@@ -297,7 +388,7 @@ fun ProfileScreen(
                 color = Color.White
             ) {
                 Column {
-                    MenuItem(Icons.Outlined.Person, "Mi cuenta")
+                    MenuItem(Icons.Outlined.Person, "Mi cuenta", onClick = { showEditAccountDialog = true })
                     MenuItem(Icons.Outlined.Shield, "Seguridad")
                     MenuItem(Icons.Outlined.CreditCard, "Tarjetas")
                     MenuItem(Icons.Outlined.GridView, "Categorías", onClick =  onNavigateToCategories)
@@ -306,7 +397,166 @@ fun ProfileScreen(
                     MenuItem(Icons.Outlined.Settings, "Configuración")
                     MenuItem(Icons.Outlined.MenuBook, "Libro de reclamaciones")
                     MenuItem(Icons.Outlined.HelpOutline, "Ayuda")
+                    MenuItem(Icons.AutoMirrored.Outlined.ExitToApp, "Cerrar sesión", onClick = { showLogoutDialog = true })
                 }
+            }
+
+            // Edit Account Dialog ("Mi cuenta")
+            if (showEditAccountDialog) {
+                AlertDialog(
+                    onDismissRequest = { if (!isSavingAccount) showEditAccountDialog = false },
+                    title = {
+                        Text(
+                            text = "Mi cuenta",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 20.sp
+                        )
+                    },
+                    text = {
+                        Column(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .verticalScroll(rememberScrollState()),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            // Avatar Picker
+                            Box(
+                                modifier = Modifier
+                                    .size(90.dp)
+                                    .clip(CircleShape)
+                                    .background(Color.LightGray)
+                                    .clickable { imagePickerLauncher.launch("image/*") },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (selectedImageUri != null) {
+                                    AsyncImage(
+                                        model = selectedImageUri,
+                                        contentDescription = "Foto elegida",
+                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else if (userPhotoUrl.isNotEmpty()) {
+                                    AsyncImage(
+                                        model = userPhotoUrl,
+                                        contentDescription = "Foto de perfil",
+                                        modifier = Modifier.fillMaxSize().clip(CircleShape),
+                                        contentScale = ContentScale.Crop
+                                    )
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Default.Person,
+                                        contentDescription = null,
+                                        tint = Color.White,
+                                        modifier = Modifier.size(50.dp)
+                                    )
+                                }
+                            }
+
+                            TextButton(onClick = { imagePickerLauncher.launch("image/*") }) {
+                                Text("Seleccionar foto de perfil", color = MLBlue)
+                            }
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = nombreState,
+                                onValueChange = { nombreState = it },
+                                label = { Text("Nombre") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = apellidoState,
+                                onValueChange = { apellidoState = it },
+                                label = { Text("Apellidos") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = ciudadState,
+                                onValueChange = { ciudadState = it },
+                                label = { Text("Ciudad") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+
+                            Spacer(modifier = Modifier.height(8.dp))
+
+                            OutlinedTextField(
+                                value = telefonoState,
+                                onValueChange = { telefonoState = it },
+                                label = { Text("Teléfono") },
+                                singleLine = true,
+                                modifier = Modifier.fillMaxWidth()
+                            )
+                        }
+                    },
+                    confirmButton = {
+                        Button(
+                            onClick = { saveUserData() },
+                            enabled = !isSavingAccount,
+                            colors = ButtonDefaults.buttonColors(containerColor = MLBlue)
+                        ) {
+                            if (isSavingAccount) {
+                                CircularProgressIndicator(
+                                    modifier = Modifier.size(20.dp),
+                                    color = Color.White,
+                                    strokeWidth = 2.dp
+                                )
+                            } else {
+                                Text("Guardar", color = Color.White)
+                            }
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showEditAccountDialog = false },
+                            enabled = !isSavingAccount
+                        ) {
+                            Text("Cancelar", color = MLGray)
+                        }
+                    },
+                    containerColor = Color.White
+                )
+            }
+
+            // Logout Confirmation Dialog
+            if (showLogoutDialog) {
+                AlertDialog(
+                    onDismissRequest = { showLogoutDialog = false },
+                    title = {
+                        Text(
+                            text = "¿Estas seguro que quieres salir?",
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    },
+                    confirmButton = {
+                        TextButton(
+                            onClick = {
+                                showLogoutDialog = false
+                                auth.signOut()
+                                onLogout()
+                            }
+                        ) {
+                            Text("Sí", color = MLBlue, fontWeight = FontWeight.Bold)
+                        }
+                    },
+                    dismissButton = {
+                        TextButton(
+                            onClick = { showLogoutDialog = false }
+                        ) {
+                            Text("No", color = MLGray)
+                        }
+                    },
+                    containerColor = Color.White
+                )
             }
 
             Spacer(modifier = Modifier.height(24.dp))
@@ -322,12 +572,12 @@ fun ProfileScreen(
 }
 
 @Composable
-fun MenuItem(icon: ImageVector, title: String,onClick: () -> Unit = {}) {
+fun MenuItem(icon: ImageVector, title: String, onClick: () -> Unit = {}) {
     Column {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable {onClick() }
+                .clickable { onClick() }
                 .padding(16.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {

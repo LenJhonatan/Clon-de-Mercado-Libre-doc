@@ -23,7 +23,6 @@ import com.example.app_clon_mercado_libre.ui.theme.*
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddressScreen(
-    productId: String?,
     onNavigateToCheckout: () -> Unit,
     onNavigateBack: () -> Unit
 ) {

@@ -1,7 +1,10 @@
 package com.example.app_clon_mercado_libre.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.pager.HorizontalPager
+import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -23,15 +26,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import coil.compose.AsyncImage
 import com.example.app_clon_mercado_libre.R
-import com.example.app_clon_mercado_libre.ui.theme.*
-
+import com.example.app_clon_mercado_libre.data.Product
 import com.example.app_clon_mercado_libre.data.ProductRepository
+import com.example.app_clon_mercado_libre.ui.theme.*
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -40,24 +46,36 @@ fun ProductDetailScreen(
     onNavigateBack: () -> Unit,
     onNavigateToFavorites: () -> Unit,
     onNavigateToProfile: () -> Unit,
-    onNavigateToAddress: (String) -> Unit,
+    onNavigateToAddress: () -> Unit,
     onNavigateToPurchases: () -> Unit,
-    onNavigateToCategories: () -> Unit = {}
+    onNavigateToCategories: () -> Unit = {},
+    onNavigateToCart: () -> Unit = {}
 ) {
-    var selectedColor by remember { mutableStateOf("Negro") }
     var quantity by remember { mutableStateOf(1) }
     var showQuantityMenu by remember { mutableStateOf(false) }
     var couponApplied by remember { mutableStateOf(false) }
 
-    // Obtener datos reales del repositorio
-    val product = ProductRepository.getProductById(productId)
+    var product by remember { mutableStateOf<Product?>(null) }
+    var isLoadingProduct by remember { mutableStateOf(true) }
+    val context = LocalContext.current
+    val maxStock = product?.stock ?: 1
+    val pagerState = rememberPagerState { product?.images?.size?.coerceAtLeast(1) ?: 1 }
+    val scope = rememberCoroutineScope()
+
+    LaunchedEffect(productId) {
+        isLoadingProduct = true
+        ProductRepository.getProductById(productId) {
+            product = it
+            isLoadingProduct = false
+        }
+    }
+
     val isFavorite = product?.let { ProductRepository.favorites.contains(it.id) } ?: false
-    
-    val productName = product?.name ?: "Producto no encontrado"
-    val price = product?.currentPrice ?: "S/ 0"
-    val oldPrice = product?.oldPrice ?: "S/ 0"
-    val productImage = product?.imageRes ?: R.drawable.mdl // Placeholder
-    val delivery = product?.delivery ?: "Llega hoy"
+
+    val productName = product?.name ?: if (isLoadingProduct) "Cargando..." else "Producto no encontrado"
+    val price = product?.currentPrice ?: ""
+    val oldPrice = product?.oldPriceFormatted ?: ""
+    val delivery = product?.delivery ?: ""
 
     Scaffold(
         topBar = {
@@ -91,10 +109,10 @@ fun ProductDetailScreen(
                     onClick = onNavigateToCategories
                 )
                 NavigationBarItem(
-                    icon = { Icon(Icons.Outlined.ShoppingCart, null) }, 
-                    label = { Text("Carrito", fontSize = 10.sp) }, 
-                    selected = false, 
-                    onClick = onNavigateToPurchases
+                    icon = { Icon(Icons.Outlined.ShoppingCart, null) },
+                    label = { Text("Carrito", fontSize = 10.sp) },
+                    selected = false,
+                    onClick = onNavigateToCart
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Outlined.PlayCircle, null) }, 
@@ -120,18 +138,44 @@ fun ProductDetailScreen(
         ) {
             // Image and Counter
             Box(modifier = Modifier.fillMaxWidth().height(300.dp)) {
-                Image(
-                    painter = painterResource(id = productImage),
-                    contentDescription = null,
-                    modifier = Modifier.fillMaxSize(),
-                    contentScale = ContentScale.Fit
-                )
-                Surface(
-                    color = Color.Black.copy(alpha = 0.6f),
-                    shape = RoundedCornerShape(12.dp),
-                    modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
-                ) {
-                    Text("1 / 4", color = Color.White, fontSize = 12.sp, modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp))
+                if (isLoadingProduct) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.align(Alignment.Center),
+                        color = MLBlue
+                    )
+                } else if (product != null && product!!.images.isNotEmpty()) {
+                    HorizontalPager(
+                        state = pagerState,
+                        modifier = Modifier.fillMaxSize()
+                    ) { page ->
+                        AsyncImage(
+                            model = product!!.images[page],
+                            contentDescription = product!!.name,
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Fit,
+                            error = painterResource(id = R.drawable.mdl),
+                            placeholder = painterResource(id = R.drawable.mdl)
+                        )
+                    }
+                    Surface(
+                        color = Color.Black.copy(alpha = 0.6f),
+                        shape = RoundedCornerShape(12.dp),
+                        modifier = Modifier.align(Alignment.TopEnd).padding(16.dp)
+                    ) {
+                        Text(
+                            "${pagerState.currentPage + 1} / ${product!!.images.size}",
+                            color = Color.White,
+                            fontSize = 12.sp,
+                            modifier = Modifier.padding(horizontal = 8.dp, vertical = 2.dp)
+                        )
+                    }
+                } else {
+                    Image(
+                        painter = painterResource(id = R.drawable.mdl),
+                        contentDescription = null,
+                        modifier = Modifier.fillMaxSize(),
+                        contentScale = ContentScale.Fit
+                    )
                 }
             }
 
@@ -168,19 +212,51 @@ fun ProductDetailScreen(
                     repeat(5) {
                         Icon(Icons.Default.Star, null, tint = MLBlue, modifier = Modifier.size(16.dp))
                     }
-                    Text(" 5.0 | +5 vendidos", fontSize = 14.sp, color = Color.Black)
+                    Text(
+                        " ${product?.sellerRating ?: 0.0} | ${product?.sellerSales ?: 0} vendidos",
+                        fontSize = 14.sp,
+                        color = Color.Black
+                    )
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
 
+                if (oldPrice.isNotBlank()) {
+                    Text(
+                        text = oldPrice,
+                        fontSize = 16.sp,
+                        color = Color.Red,
+                        textDecoration = TextDecoration.LineThrough
+                    )
+                }
+                Text(text = price, fontSize = 32.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                Text("6 cuotas sin interés", color = Color(0xFF00A650), fontSize = 16.sp)
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Descripción y stock
+                if (!product?.description.isNullOrBlank()) {
+                    Text("Descripción", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = Color.Black)
+                    Text(
+                        text = product?.description ?: "",
+                        fontSize = 14.sp,
+                        color = MLGray,
+                        lineHeight = 20.sp,
+                        modifier = Modifier.padding(top = 4.dp)
+                    )
+                }
+                val stockValue = product?.stock ?: 0
                 Text(
-                    text = oldPrice,
-                    fontSize = 16.sp,
-                    color = Color.Red,
-                    textDecoration = TextDecoration.LineThrough
+                    text = when {
+                        product == null -> ""
+                        stockValue > 0 -> "Stock disponible: $stockValue unidades"
+                        else -> "Sin stock"
+                    },
+                    fontSize = 14.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = if (stockValue > 0) Color(0xFF00A650) else Color.Red,
+                    modifier = Modifier.padding(top = 8.dp)
                 )
-                Text(text = price, fontSize = 32.sp, fontWeight = FontWeight.Bold,color = Color.Black)   //,color = Color.Black
-                Text("6 cuotas de S/ 24.83 sin interés", color = Color(0xFF00A650), fontSize = 16.sp)  //(0xFF00A650)
 
                 Spacer(modifier = Modifier.height(16.dp))
 
@@ -220,12 +296,68 @@ fun ProductDetailScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Colores
-                Text("Colores: $selectedColor", fontWeight = FontWeight.Bold, color = Color.Black )   //, color = Color.Black
-                Row(modifier = Modifier.padding(vertical = 8.dp)) {
-                    ColorOption(productImage, isSelected = selectedColor == "Negro") { selectedColor = "Negro" }
-                    Spacer(modifier = Modifier.width(8.dp))
-                    ColorOption(productImage, isSelected = selectedColor == "Gris") { selectedColor = "Gris" }
+                // Fotos del producto (miniaturas)
+                if (!product?.images.isNullOrEmpty()) {
+                    Text("Fotos del producto", fontWeight = FontWeight.Bold, color = Color.Black)
+                    Row(modifier = Modifier.padding(vertical = 8.dp)) {
+                        product!!.images.forEachIndexed { index, url ->
+                            AsyncImage(
+                                model = url,
+                                contentDescription = "Foto ${index + 1}",
+                                modifier = Modifier
+                                    .size(60.dp)
+                                    .border(
+                                        width = if (pagerState.currentPage == index) 2.dp else 1.dp,
+                                        color = if (pagerState.currentPage == index) MLBlue else Color.LightGray,
+                                        shape = RoundedCornerShape(8.dp)
+                                    )
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        scope.launch {
+                                            pagerState.animateScrollToPage(index)
+                                        }
+                                    }
+                                    .padding(4.dp),
+                                contentScale = ContentScale.Crop,
+                                error = painterResource(id = R.drawable.mdl)
+                            )
+                            if (index < product!!.images.lastIndex) {
+                                Spacer(modifier = Modifier.width(8.dp))
+                            }
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                // Datos del vendedor
+                Surface(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(8.dp),
+                    border = BorderStroke(1.dp, Color(0xFFE0E0E0))
+                ) {
+                    Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color(0xFFE3F2FD),
+                            modifier = Modifier.size(44.dp)
+                        ) {
+                            Icon(Icons.Default.Store, null, tint = MLBlue, modifier = Modifier.padding(10.dp))
+                        }
+                        Spacer(modifier = Modifier.width(12.dp))
+                        Column {
+                            Text(
+                                product?.sellerName?.takeIf { it.isNotBlank() } ?: "Vendedor",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                "${product?.sellerRating ?: 0.0} de reputación • ${product?.sellerSales ?: 0} ventas",
+                                fontSize = 12.sp,
+                                color = MLGray
+                            )
+                        }
+                    }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
@@ -237,11 +369,11 @@ fun ProductDetailScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Cantidad
+                // Cantidad (limitada por stock)
                 Surface(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .clickable { showQuantityMenu = true },
+                        .clickable { if (maxStock > 1) showQuantityMenu = true },
                     color = Color(0xFFF5F5F5),
                     shape = RoundedCornerShape(8.dp)
                 ) {
@@ -250,16 +382,20 @@ fun ProductDetailScreen(
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
-                        Text(text = "Cantidad: $quantity", fontWeight = FontWeight.Bold, color = Color.Black )   //, color = Color.Black
-                        Text("(+5 disponibles)", color = MLGray, fontSize = 12.sp)   //
+                        Text(text = "Cantidad: $quantity", fontWeight = FontWeight.Bold, color = Color.Black)
+                        Text(
+                            text = if (product?.hasStock == true) "($maxStock disponibles)" else "(Sin stock)",
+                            color = MLGray,
+                            fontSize = 12.sp
+                        )
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, tint = MLBlue)
                     }
-                    
+
                     DropdownMenu(
                         expanded = showQuantityMenu,
                         onDismissRequest = { showQuantityMenu = false }
                     ) {
-                        (1..6).forEach { num ->
+                        (1..maxStock).forEach { num ->
                             DropdownMenuItem(
                                 text = { Text("$num unidad${if (num > 1) "es" else ""}") },
                                 onClick = {
@@ -275,11 +411,20 @@ fun ProductDetailScreen(
 
                 // Botones
                 Button(
-                    onClick = { 
-                        product?.let { onNavigateToAddress(it.id) }
+                    onClick = {
+                        product?.let {
+                            ProductRepository.addToCart(it, quantity) { errorMsg ->
+                                if (errorMsg == null) {
+                                    onNavigateToAddress()
+                                } else {
+                                    Toast.makeText(context, errorMsg, Toast.LENGTH_SHORT).show()
+                                }
+                            }
+                        }
                     },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(8.dp),
+                    enabled = product?.hasStock == true,
                     colors = ButtonDefaults.buttonColors(containerColor = MLBlue)
                 ) {
                     Text("Comprar Ahora", fontSize = 16.sp, color = Color.White, fontWeight = FontWeight.Bold)
@@ -288,9 +433,20 @@ fun ProductDetailScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedButton(
-                    onClick = { },
+                    onClick = {
+                        product?.let {
+                            ProductRepository.addToCart(it, quantity) { errorMsg ->
+                                Toast.makeText(
+                                    context,
+                                    errorMsg ?: "Agregado al carrito: ${it.name} (x$quantity)",
+                                    Toast.LENGTH_SHORT
+                                ).show()
+                            }
+                        }
+                    },
                     modifier = Modifier.fillMaxWidth().height(50.dp),
                     shape = RoundedCornerShape(8.dp),
+                    enabled = product?.hasStock == true,
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = MLBlue),
                     border = BorderStroke(1.dp, MLBlue.copy(alpha = 0.3f))
                 ) {
@@ -304,24 +460,5 @@ fun ProductDetailScreen(
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }
-    }
-}
-
-
-@Composable
-fun ColorOption(imageRes: Int, isSelected: Boolean, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(60.dp)
-            .border(
-                width = if (isSelected) 2.dp else 1.dp,
-                color = if (isSelected) MLBlue else Color.LightGray,
-                shape = RoundedCornerShape(8.dp)
-            )
-            .clip(RoundedCornerShape(8.dp))
-            .clickable(onClick = onClick)
-            .padding(4.dp)
-    ) {
-        Image(painter = painterResource(id = imageRes), contentDescription = null, modifier = Modifier.fillMaxSize())
     }
 }

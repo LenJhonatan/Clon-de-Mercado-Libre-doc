@@ -15,6 +15,9 @@ import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -31,10 +34,16 @@ fun FavoritesScreen(
     onNavigateToHome: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToPurchases: () -> Unit,
-    onNavigateToCategories: () -> Unit = {}
+    onNavigateToCategories: () -> Unit = {},
+    onNavigateToCart: () -> Unit = {}
 ) {
-    val favoriteProducts = ProductRepository.products.filter { 
-        ProductRepository.favorites.contains(it.id) 
+    val products by ProductRepository.products.collectAsState()
+    val favoriteProducts = products.filter {
+        ProductRepository.favorites.contains(it.id)
+    }
+
+    LaunchedEffect(Unit) {
+        ProductRepository.loadActiveProducts()
     }
 
     Scaffold(
@@ -62,7 +71,7 @@ fun FavoritesScreen(
                     icon = { Icon(Icons.Outlined.ShoppingCart, null) },
                     label = { Text("Carrito", fontSize = 10.sp) },
                     selected = false,
-                    onClick = onNavigateToPurchases
+                    onClick = onNavigateToCart
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Outlined.PlayCircle, null) },

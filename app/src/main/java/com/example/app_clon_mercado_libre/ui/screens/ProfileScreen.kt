@@ -36,6 +36,7 @@ import androidx.compose.ui.unit.sp
 import coil.compose.AsyncImage
 import com.example.app_clon_mercado_libre.R
 import com.example.app_clon_mercado_libre.data.ProductRepository
+import com.example.app_clon_mercado_libre.ui.components.ProductImage
 import com.example.app_clon_mercado_libre.ui.theme.*
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
@@ -50,7 +51,10 @@ fun ProfileScreen(
     onNavigateToFavorites: () -> Unit,
     onNavigateToPurchases: () -> Unit,
     onNavigateToCategories: () -> Unit,
-    onLogout: () -> Unit = {}
+    onLogout: () -> Unit = {},
+    onNavigateToPublish: () -> Unit = {},
+    onNavigateToMyProducts: () -> Unit = {},
+    onNavigateToCart: () -> Unit = {}
 ) {
     val context = LocalContext.current
     val auth = FirebaseAuth.getInstance()
@@ -77,10 +81,15 @@ fun ProfileScreen(
         }
     }
 
-    val favoriteProducts = ProductRepository.products.filter { 
-        ProductRepository.favorites.contains(it.id) 
+    val products by ProductRepository.products.collectAsState()
+    val favoriteProducts = products.filter {
+        ProductRepository.favorites.contains(it.id)
     }
     val purchases = ProductRepository.purchases
+
+    LaunchedEffect(Unit) {
+        ProductRepository.loadActiveProducts()
+    }
 
     LaunchedEffect(currentUser) {
         currentUser?.let { user ->
@@ -188,7 +197,7 @@ fun ProfileScreen(
                     icon = { Icon(Icons.Outlined.ShoppingCart, null) },
                     label = { Text("Carrito", fontSize = 10.sp) },
                     selected = false,
-                    onClick = onNavigateToPurchases
+                    onClick = onNavigateToCart
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Outlined.PlayCircle, null) },
@@ -265,7 +274,7 @@ fun ProfileScreen(
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
                     Row(
-                        modifier = Modifier.fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth().clickable { onNavigateToPurchases() },
                         verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween
                     ) {
@@ -278,23 +287,39 @@ fun ProfileScreen(
                     }
                     
                     Spacer(modifier = Modifier.height(12.dp))
-                    
-                    if (purchases.isEmpty()) {
+
+                    val myOrders by ProductRepository.orders.collectAsState()
+                    LaunchedEffect(Unit) { ProductRepository.loadMyOrders() }
+                    if (myOrders.isEmpty()) {
                         Text("No hay compras.", color = MLGray, fontSize = 14.sp)
                     } else {
-                        // Show last purchase
-                        val lastPurchase = purchases.last()
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Image(
-                                painter = painterResource(id = lastPurchase.imageRes),
-                                contentDescription = null,
-                                modifier = Modifier.size(50.dp).clip(RoundedCornerShape(4.dp)),
-                                contentScale = ContentScale.Crop
-                            )
+                        val lastOrder = myOrders.first()
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { onNavigateToPurchases() }
+                        ) {
+                            Surface(
+                                color = Color(0xFFE8F5E9),
+                                shape = RoundedCornerShape(4.dp),
+                                modifier = Modifier.size(50.dp)
+                            ) {
+                                Icon(
+                                    Icons.Default.ShoppingBag,
+                                    contentDescription = null,
+                                    tint = Color(0xFF00A650),
+                                    modifier = Modifier.padding(12.dp)
+                                )
+                            }
                             Spacer(modifier = Modifier.width(12.dp))
                             Column {
-                                Text("Llega mañana", color = Color(0xFF00A650), fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                Text(lastPurchase.name, fontSize = 14.sp, maxLines = 1)
+                                Text(
+                                    lastOrder.status.replaceFirstChar { it.uppercase() },
+                                    color = Color(0xFF00A650),
+                                    fontSize = 14.sp,
+                                    fontWeight = FontWeight.Bold
+                                )
+                                Text(lastOrder.itemsSummary, fontSize = 14.sp, maxLines = 1)
+                                Text(lastOrder.totalFormatted, fontSize = 12.sp, color = MLGray)
                             }
                         }
                     }
@@ -336,14 +361,12 @@ fun ProfileScreen(
                             items(favoriteProducts) { product ->
                                 Column(modifier = Modifier.width(100.dp)) {
                                     Box {
-                                        Image(
-                                            painter = painterResource(id = product.imageRes),
-                                            contentDescription = null,
+                                        ProductImage(
+                                            product = product,
                                             modifier = Modifier
                                                 .size(100.dp)
                                                 .clip(RoundedCornerShape(8.dp))
-                                                .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(8.dp)),
-                                            contentScale = ContentScale.Crop
+                                                .border(1.dp, Color(0xFFE0E0E0), RoundedCornerShape(8.dp))
                                         )
                                         Icon(
                                             Icons.Filled.Favorite, 
@@ -365,7 +388,7 @@ fun ProfileScreen(
 
             // Sell Button
             Button(
-                onClick = { },
+                onClick = { onNavigateToPublish() },
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(horizontal = 16.dp)
@@ -389,6 +412,8 @@ fun ProfileScreen(
             ) {
                 Column {
                     MenuItem(Icons.Outlined.Person, "Mi cuenta", onClick = { showEditAccountDialog = true })
+                    MenuItem(Icons.Outlined.Storefront, "Mis publicaciones", onClick = onNavigateToMyProducts)
+                    MenuItem(Icons.Outlined.AddBox, "Publicar producto", onClick = onNavigateToPublish)
                     MenuItem(Icons.Outlined.Shield, "Seguridad")
                     MenuItem(Icons.Outlined.CreditCard, "Tarjetas")
                     MenuItem(Icons.Outlined.GridView, "Categorías", onClick =  onNavigateToCategories)

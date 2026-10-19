@@ -33,6 +33,7 @@ import androidx.compose.ui.unit.sp
 import com.example.app_clon_mercado_libre.R
 import com.example.app_clon_mercado_libre.data.Product
 import com.example.app_clon_mercado_libre.data.ProductRepository
+import com.example.app_clon_mercado_libre.ui.components.ProductImage
 import com.example.app_clon_mercado_libre.ui.theme.*
 
 @Composable
@@ -41,18 +42,22 @@ fun HomeScreen(
     onNavigateToFavorites: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToPurchases: () -> Unit,
-    onNavigateToCategories: () -> Unit = {}
+    onNavigateToCategories: () -> Unit = {},
+    onNavigateToCart: () -> Unit = {}
 ) {
     var searchQuery by remember { mutableStateOf("") }
     val keyboardController = LocalSoftwareKeyboardController.current
 
-    val filteredProducts = if (searchQuery.isEmpty()) {
-        ProductRepository.products
-    } else {
-        ProductRepository.products.filter { 
-            it.name.contains(searchQuery, ignoreCase = true) || 
-            it.category.contains(searchQuery, ignoreCase = true)
-        }
+    val products by ProductRepository.products.collectAsState()
+    val isLoading by ProductRepository.isLoading.collectAsState()
+    val loadError by ProductRepository.error.collectAsState()
+
+    LaunchedEffect(Unit) {
+        ProductRepository.loadActiveProducts()
+    }
+
+    val filteredProducts = products.filter {
+        ProductRepository.matchesQuery(it, searchQuery)
     }
 
     Scaffold(
@@ -135,7 +140,7 @@ fun HomeScreen(
                     icon = { Icon(Icons.Outlined.ShoppingCart, contentDescription = null) },
                     label = { Text("Carrito",color = Color.Black, fontSize = 10.sp) },
                     selected = false,
-                    onClick = onNavigateToPurchases
+                    onClick = onNavigateToCart
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Outlined.PlayCircle, contentDescription = null) },
@@ -200,24 +205,49 @@ fun HomeScreen(
             }
 
             // Grid of products (Simulated with Columns/Rows because of verticalScroll parent)
-            Column(modifier = Modifier.padding(horizontal = 8.dp)) {
-                val chunkedProducts = filteredProducts.chunked(2)
-                chunkedProducts.forEach { pair ->
-                    Row(modifier = Modifier.fillMaxWidth()) {
-                        pair.forEach { product ->
-                            ProductCard(
-                                product, 
-                                modifier = Modifier.weight(1f).clickable { onNavigateToDetail(product.id) }
-                            )
+            if (isLoading) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(48.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    CircularProgressIndicator(color = MLBlue)
+                }
+            } else if (loadError != null) {
+                Box(
+                    modifier = Modifier.fillMaxWidth().padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text("Error al cargar productos: $loadError", color = Color.Red)
+                }
+            } else {
+                Column(modifier = Modifier.padding(horizontal = 8.dp)) {
+                    val chunkedProducts = filteredProducts.chunked(2)
+                    chunkedProducts.forEach { pair ->
+                        Row(modifier = Modifier.fillMaxWidth()) {
+                            pair.forEach { product ->
+                                ProductCard(
+                                    product,
+                                    modifier = Modifier.weight(1f).clickable { onNavigateToDetail(product.id) }
+                                )
+                            }
+                            if (pair.size == 1) Spacer(modifier = Modifier.weight(1f))
                         }
-                        if (pair.size == 1) Spacer(modifier = Modifier.weight(1f))
                     }
                 }
-            }
-            
-            if (filteredProducts.isEmpty()) {
-                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
-                    Text("No se encontraron productos.", color = MLGray)
+
+                if (filteredProducts.isEmpty()) {
+                    Box(
+                        modifier = Modifier.fillMaxWidth().padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = if (searchQuery.isBlank())
+                                "No hay productos publicados."
+                            else
+                                "No se encontraron productos para \"$searchQuery\".",
+                            color = MLGray
+                        )
+                    }
                 }
             }
 
@@ -291,7 +321,8 @@ fun CategoryItem(name: String, iconRes: Int) {
 
 @Composable
 fun ProductCard(product: Product, modifier: Modifier = Modifier) {
-    val isFavorite = ProductRepository.favorites.contains(product.id)
+    val favorites = ProductRepository.favorites
+    val isFavorite = favorites.contains(product.id)
 
 
     Card(
@@ -302,24 +333,16 @@ fun ProductCard(product: Product, modifier: Modifier = Modifier) {
     ) {
         Column {
             Box {
-                Image(
-                    painter = painterResource(id = product.imageRes),
-                    contentDescription = product.name,
+                ProductImage(
+                    product = product,
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(150.dp),
-                    contentScale = ContentScale.Crop
+                        .height(150.dp)
                 )
-                
+
                 // Favorite Heart in Card
                 IconButton(
-                    onClick = { 
-                        if (isFavorite) {
-                            ProductRepository.favorites.remove(product.id)
-                        } else {
-                            ProductRepository.favorites.add(product.id)
-                        }
-                    },
+                    onClick = { ProductRepository.toggleFavorite(product.id) },
                     modifier = Modifier.align(Alignment.TopEnd).padding(4.dp)
                 ) {
                     Icon(
@@ -330,49 +353,53 @@ fun ProductCard(product: Product, modifier: Modifier = Modifier) {
                     )
                 }
 
-                Surface(
-                    color = Color(0xFF00A650),
-                    modifier = Modifier.align(Alignment.BottomStart).padding(8.dp).clip(RoundedCornerShape(2.dp))
-                ) {
-                    Text(
-                        product.tag,
-                        color = Color.White,
-                        fontSize = 10.sp,
-                        fontWeight = FontWeight.Bold,
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
-                    )
+                if (product.tag.isNotBlank()) {
+                    Surface(
+                        color = Color(0xFF00A650),
+                        modifier = Modifier.align(Alignment.BottomStart).padding(8.dp).clip(RoundedCornerShape(2.dp))
+                    ) {
+                        Text(
+                            product.tag,
+                            color = Color.White,
+                            fontSize = 10.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(horizontal = 4.dp, vertical = 2.dp)
+                        )
+                    }
                 }
             }
-            
+
             Column(modifier = Modifier.padding(8.dp)) {
                 Text(
                     text = product.currentPrice,
                     fontSize = 18.sp,
                     fontWeight = FontWeight.Bold,
-                    color = Color.Black    //MLBlack
+                    color = Color.Black
                 )
-                Text(
-                    text = product.oldPrice,
-                    fontSize = 12.sp,
-                    color = Color.Red,
-                    textDecoration = TextDecoration.LineThrough
-                )
-                
+                if (product.hasDiscount) {
+                    Text(
+                        text = product.oldPriceFormatted,
+                        fontSize = 12.sp,
+                        color = Color.Red,
+                        textDecoration = TextDecoration.LineThrough
+                    )
+                }
+
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Icon(Icons.Default.FlashOn, contentDescription = null, tint = Color(0xFF00A650), modifier = Modifier.size(12.dp))
                     Text(text = product.delivery, color = Color(0xFF00A650), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
-                
+
                 if (product.freeShipping) {
                     Text(text = "Envío gratis", color = Color(0xFF00A650), fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
                 }
 
                 Spacer(modifier = Modifier.height(4.dp))
-                
+
                 Text(
                     text = product.name,
                     fontSize = 12.sp,
-                    color = Color.Black,  //MLBlack // //MLGray
+                    color = Color.Black,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis
                 )

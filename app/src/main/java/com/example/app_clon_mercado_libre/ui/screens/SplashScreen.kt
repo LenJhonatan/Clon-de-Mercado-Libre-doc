@@ -13,13 +13,22 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import com.example.app_clon_mercado_libre.R
 import com.example.app_clon_mercado_libre.ui.theme.MLYellow
+import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.delay
 
 @Composable
-fun SplashScreen(onNavigateToLogin: () -> Unit) {
+fun SplashScreen(
+    onNavigateToLogin: () -> Unit,
+    onNavigateToHome: () -> Unit = {}
+) {
     LaunchedEffect(key1 = true) {
         delay(2000)
-        onNavigateToLogin()
+        val currentUser = FirebaseAuth.getInstance().currentUser
+        if (currentUser != null) {
+            onNavigateToHome()
+        } else {
+            onNavigateToLogin()
+        }
     }
 
     Box(
@@ -29,7 +38,7 @@ fun SplashScreen(onNavigateToLogin: () -> Unit) {
         contentAlignment = Alignment.Center
     ) {
         Image(
-            painter = painterResource(id = R.drawable.mdl), 
+            painter = painterResource(id = R.drawable.mdl),
             contentDescription = "Logo Mercado Libre",
             modifier = Modifier.size(150.dp)
         )

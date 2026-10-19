@@ -1,5 +1,6 @@
 package com.example.app_clon_mercado_libre.ui.screens
 
+import android.widget.Toast
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -17,33 +18,38 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.app_clon_mercado_libre.R
 import com.example.app_clon_mercado_libre.data.ProductRepository
+import com.example.app_clon_mercado_libre.data.formatPrice
+import com.example.app_clon_mercado_libre.ui.components.ProductImageFromUrl
 import com.example.app_clon_mercado_libre.ui.theme.*
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CheckoutScreen(
-    productId: String?,
     onPurchaseSuccess: () -> Unit,
     onNavigateBack: () -> Unit,
     onNavigateToHome: () -> Unit,
     onNavigateToProfile: () -> Unit,
     onNavigateToFavorites: () -> Unit,
     onNavigateToPurchases: () -> Unit,
-    onNavigateToCategories: () -> Unit = {}
+    onNavigateToCategories: () -> Unit = {},
+    onNavigateToCart: () -> Unit = {}
 ) {
+    val context = LocalContext.current
     var selectedPayment by remember { mutableStateOf("Yape") }
-    val product = ProductRepository.getProductById(productId)
-    
-    val productName = product?.name ?: "Producto"
-    val productImage = product?.imageRes ?: R.drawable.mdl
-    val productPrice = product?.currentPrice ?: "S/ 0"
+    var isPaying by remember { mutableStateOf(false) }
+
+    val cartItems by ProductRepository.cartItems.collectAsState()
+
+    LaunchedEffect(Unit) {
+        ProductRepository.loadCart()
+    }
+
+    val total = cartItems.sumOf { it.price * it.quantity }
 
     Scaffold(
         topBar = {
@@ -53,9 +59,6 @@ fun CheckoutScreen(
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás", tint = MLBlack)
                     }
-                },
-                actions = {
-                    IconButton(onClick = { }) { Icon(Icons.Default.AccountCircle, null, tint = MLGray) }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MLYellow)
             )
@@ -74,27 +77,37 @@ fun CheckoutScreen(
                     ) {
                         Column {
                             Text("Total a pagar:", fontSize = 12.sp, color = MLGray)
-                            Text(productPrice, fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MLBlue)
+                            Text(formatPrice(total), fontSize = 18.sp, fontWeight = FontWeight.Bold, color = MLBlue)
                         }
                         Button(
                             onClick = {
-                                product?.let { ProductRepository.purchases.add(it) }
-                                onPurchaseSuccess()
+                                if (cartItems.isEmpty()) return@Button
+                                isPaying = true
+                                ProductRepository.purchaseCart(selectedPayment) { ok, message ->
+                                    isPaying = false
+                                    Toast.makeText(context, message, Toast.LENGTH_LONG).show()
+                                    if (ok) onPurchaseSuccess()
+                                }
                             },
-                            modifier = Modifier.height(48.dp).fillMaxWidth(0.7f),
+                            enabled = !isPaying && cartItems.isNotEmpty(),
+                            modifier = Modifier.height(48.dp).fillMaxWidth(0.6f),
                             colors = ButtonDefaults.buttonColors(containerColor = MLBlue),
                             shape = RoundedCornerShape(8.dp)
                         ) {
-                            Icon(Icons.Default.VerifiedUser, null, tint = Color.White, modifier = Modifier.size(18.dp))
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Pagar y finalizar", color = Color.White, fontWeight = FontWeight.Bold)
+                            if (isPaying) {
+                                CircularProgressIndicator(color = Color.White, modifier = Modifier.size(20.dp), strokeWidth = 2.dp)
+                            } else {
+                                Icon(Icons.Default.VerifiedUser, null, tint = Color.White, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text("Pagar y finalizar", color = Color.White, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }
                 NavigationBar(containerColor = Color.White, tonalElevation = 8.dp) {
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Home, null) },
-                        label = { Text("Home", fontSize = 10.sp) },
+                        label = { Text("Inicio", fontSize = 10.sp) },
                         selected = false,
                         onClick = onNavigateToHome
                     )
@@ -107,8 +120,8 @@ fun CheckoutScreen(
                     NavigationBarItem(
                         icon = { Icon(Icons.Outlined.ShoppingCart, null, tint = MLBlue) },
                         label = { Text("Carrito", color = MLBlue, fontSize = 10.sp) },
-                        selected = true,
-                        onClick = onNavigateToPurchases
+                        selected = false,
+                        onClick = onNavigateToCart
                     )
                     NavigationBarItem(
                         icon = { Icon(Icons.Outlined.PlayCircle, null) },
@@ -118,7 +131,7 @@ fun CheckoutScreen(
                     )
                     NavigationBarItem(
                         icon = { Icon(Icons.Default.Menu, null) },
-                        label = { Text("More", fontSize = 10.sp) },
+                        label = { Text("Más", fontSize = 10.sp) },
                         selected = false,
                         onClick = onNavigateToProfile
                     )
@@ -146,98 +159,97 @@ fun CheckoutScreen(
                 }
             }
 
-            // Forma de Entrega
-            CheckoutSection(title = "Forma de entrega") {
-                Row(verticalAlignment = Alignment.Top) {
-                    Icon(Icons.Default.LocationOn, null, tint = MLGray, modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(12.dp))
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text("Dirección registrada", fontSize = 12.sp, color = MLGray)
-                        Text("Av. Javier Prado Este 2450, Dpto 12D, San Borja, Lima", fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        Text("Juan Pérez • 987 654 321", fontSize = 12.sp, color = MLGray)
-                    }
-                    Text("Modificar", color = MLBlue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
+            // Aviso de pago simulado (RF09)
+            Surface(
+                modifier = Modifier.fillMaxWidth(),
+                color = Color(0xFFFFF8E1)
+            ) {
+                Row(modifier = Modifier.padding(12.dp), verticalAlignment = Alignment.Top) {
+                    Icon(Icons.Default.Info, null, tint = Color(0xFFF9A825), modifier = Modifier.size(16.dp))
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        "Pago simulado: esta app no realiza cobros reales. Al confirmar, se registrará el pedido y se descontará el stock.",
+                        fontSize = 12.sp,
+                        color = Color(0xFF6D4C00),
+                        lineHeight = 16.sp
+                    )
                 }
             }
 
-            // Delivery Time
-            CheckoutSection {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Surface(color = Color(0xFFE8F5E9), shape = CircleShape, modifier = Modifier.size(40.dp)) {
-                        Icon(Icons.Default.Bolt, null, tint = Color(0xFF00A650), modifier = Modifier.padding(8.dp))
-                    }
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Surface(color = Color(0xFFE0F2F1), shape = RoundedCornerShape(2.dp)) {
-                                Text("FULL", color = Color(0xFF00A650), fontSize = 10.sp, fontWeight = FontWeight.Bold, modifier = Modifier.padding(horizontal = 4.dp))
+            if (cartItems.isEmpty()) {
+                Box(modifier = Modifier.fillMaxWidth().padding(32.dp), contentAlignment = Alignment.Center) {
+                    Text("Tu carrito está vacío.", color = MLGray)
+                }
+            } else {
+                // Resumen de productos
+                CheckoutSection(title = "Productos (${cartItems.size})") {
+                    cartItems.forEach { item ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            ProductImageFromUrl(
+                                url = item.imageUrl,
+                                contentDescription = item.name,
+                                modifier = Modifier
+                                    .size(50.dp)
+                                    .clip(RoundedCornerShape(4.dp))
+                                    .border(0.5.dp, Color.LightGray, RoundedCornerShape(4.dp))
+                            )
+                            Spacer(modifier = Modifier.width(12.dp))
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(item.name, fontSize = 13.sp, maxLines = 1)
+                                Text("Cantidad: ${item.quantity}", fontSize = 12.sp, color = MLGray)
                             }
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text("Llega entre el viernes 24 y sábado 25", fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                            Text(item.subtotalFormatted, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                         }
-                        Text("Envío prioritario a tu domicilio", fontSize = 12.sp, color = MLGray)
-                        Text("Envío Gratis (Mercado Envíos FULL)", color = Color(0xFF00A650), fontSize = 12.sp, fontWeight = FontWeight.Bold)
                     }
                 }
-            }
 
-            // Medios de pago
-            CheckoutSection(title = "Medios de pago", actionIcon = Icons.Default.Lock) {
-                Column {
-                    PaymentOption(
-                        title = "Yape",
-                        subtitle = "Paga al instante escaneando código QR o ingresando tu código de aprobación Yape desde tu celular.",
-                        tag = "Rápido",
-                        selected = selectedPayment == "Yape",
-                        onSelect = { selectedPayment = "Yape" }
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    PaymentOption(
-                        title = "Tarjeta de crédito o débito",
-                        subtitle = "Visa, Mastercard, American Express. Hasta 12 cuotas sin intereses con bancos seleccionados.",
-                        selected = selectedPayment == "Tarjeta",
-                        onSelect = { selectedPayment = "Tarjeta" }
-                    )
-                }
-            }
-
-            // Resumen del pedido
-            CheckoutSection(title = "Resumen del pedido") {
-                Column {
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Image(
-                            painter = painterResource(id = productImage),
-                            contentDescription = null,
-                            modifier = Modifier.size(60.dp).clip(RoundedCornerShape(4.dp)).background(Color.White).border(0.5.dp, Color.LightGray, RoundedCornerShape(4.dp)),
-                            contentScale = ContentScale.Fit
+                // Medios de pago
+                CheckoutSection(title = "Medios de pago", actionIcon = Icons.Default.Lock) {
+                    Column {
+                        PaymentOption(
+                            title = "Yape",
+                            subtitle = "Pago simulado. En la app real escanearías el código QR.",
+                            tag = "Rápido",
+                            selected = selectedPayment == "Yape",
+                            onSelect = { selectedPayment = "Yape" }
                         )
-                        Spacer(modifier = Modifier.width(16.dp))
-                        Column {
-                            Text(productName, fontSize = 14.sp, maxLines = 1)
-                            Text("1 unidad • Titánio Gris 256GB", fontSize = 12.sp, color = MLGray)
-                            Text(productPrice, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                        }
+                        Spacer(modifier = Modifier.height(12.dp))
+                        PaymentOption(
+                            title = "Tarjeta de crédito o débito",
+                            subtitle = "Visa, Mastercard, American Express. Pago simulado, no se realiza cobro.",
+                            selected = selectedPayment == "Tarjeta",
+                            onSelect = { selectedPayment = "Tarjeta" }
+                        )
                     }
-                    
-                    Spacer(modifier = Modifier.height(16.dp))
-                    
-                    SummaryRow("Producto", productPrice)
-                    SummaryRow("Cupón Mercado Pago", "- S/ 150", isDiscount = true)
-                    SummaryRow("Costo de envío", "GRATIS", isFree = true)
-                    
-                    Spacer(modifier = Modifier.height(12.dp))
-                    HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Total:", fontSize = 18.sp, fontWeight = FontWeight.Bold)
-                        Text(productPrice, fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MLBlue)
+                }
+
+                // Resumen del pedido
+                CheckoutSection(title = "Resumen del pedido") {
+                    Column {
+                        SummaryRow("Productos", formatPrice(total))
+                        SummaryRow("Costo de envío", "GRATIS", isFree = true)
+
+                        Spacer(modifier = Modifier.height(12.dp))
+                        HorizontalDivider(color = Color.LightGray, thickness = 0.5.dp)
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text("Total:", fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                            Text(formatPrice(total), fontSize = 20.sp, fontWeight = FontWeight.Bold, color = MLBlue)
+                        }
                     }
                 }
             }
 
             Spacer(modifier = Modifier.height(16.dp))
-            Row(modifier = Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                horizontalArrangement = Arrangement.Center,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 Icon(Icons.Default.Lock, null, tint = MLGray, modifier = Modifier.size(14.dp))
                 Spacer(modifier = Modifier.width(8.dp))
                 Text("Transacción cifrada de extremo a extremo", color = MLGray, fontSize = 12.sp)
@@ -259,7 +271,10 @@ fun CheckoutSection(
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             if (title != null) {
-                Row(modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
                     Text(title, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                     if (actionIcon != null) Icon(actionIcon, null, tint = MLGray, modifier = Modifier.size(20.dp))
                 }
@@ -304,11 +319,14 @@ fun PaymentOption(
 
 @Composable
 fun SummaryRow(label: String, value: String, isDiscount: Boolean = false, isFree: Boolean = false) {
-    Row(modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween) {
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        horizontalArrangement = Arrangement.SpaceBetween
+    ) {
         Text(label, fontSize = 14.sp, color = MLGray)
         Text(
-            text = value, 
-            fontSize = 14.sp, 
+            text = value,
+            fontSize = 14.sp,
             color = if (isDiscount) Color.Red else if (isFree) Color(0xFF00A650) else MLBlack,
             fontWeight = if (isFree) FontWeight.Bold else FontWeight.Normal
         )

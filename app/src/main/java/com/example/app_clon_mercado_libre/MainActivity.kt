@@ -31,17 +31,24 @@ fun MainNavigation() {
 
     NavHost(navController = navController, startDestination = "splash") {
         composable("splash") {
-            SplashScreen(onNavigateToLogin = {
-                navController.navigate("login") {
-                    popUpTo("splash") { inclusive = true }
+            SplashScreen(
+                onNavigateToLogin = {
+                    navController.navigate("login") {
+                        popUpTo("splash") { inclusive = true }
+                    }
+                },
+                onNavigateToHome = {
+                    navController.navigate("home") {
+                        popUpTo("splash") { inclusive = true }
+                    }
                 }
-            })
+            )
         }
         composable("login") {
             LoginScreen(
                 onNavigateToRegister = { navController.navigate("register") },
-                onNavigateToPassword = { email -> 
-                    navController.navigate("password/$email") 
+                onNavigateToPassword = { email ->
+                    navController.navigate("password/$email")
                 }
             )
         }
@@ -87,18 +94,11 @@ fun MainNavigation() {
                 onNavigateToDetail = { productId ->
                     navController.navigate("productDetail/$productId")
                 },
-                onNavigateToFavorites = {
-                    navController.navigate("favorites")
-                },
-                onNavigateToProfile = {
-                    navController.navigate("profile")
-                },
-                onNavigateToPurchases = {
-                    navController.navigate("purchases")
-                },
-                onNavigateToCategories = {
-                    navController.navigate("categories")
-                }
+                onNavigateToFavorites = { navController.navigate("favorites") },
+                onNavigateToProfile = { navController.navigate("profile") },
+                onNavigateToPurchases = { navController.navigate("purchases") },
+                onNavigateToCategories = { navController.navigate("categories") },
+                onNavigateToCart = { navController.navigate("cart") }
             )
         }
         composable("favorites") {
@@ -109,15 +109,10 @@ fun MainNavigation() {
                 onNavigateToHome = {
                     navController.navigate("home") { popUpTo("home") { inclusive = true } }
                 },
-                onNavigateToProfile = {
-                    navController.navigate("profile")
-                },
-                onNavigateToPurchases = {
-                    navController.navigate("purchases")
-                },
-                onNavigateToCategories = {
-                    navController.navigate("categories")
-                }
+                onNavigateToProfile = { navController.navigate("profile") },
+                onNavigateToPurchases = { navController.navigate("purchases") },
+                onNavigateToCategories = { navController.navigate("categories") },
+                onNavigateToCart = { navController.navigate("cart") }
             )
         }
         composable("profile") {
@@ -125,20 +120,17 @@ fun MainNavigation() {
                 onNavigateToHome = {
                     navController.navigate("home") { popUpTo("home") { inclusive = true } }
                 },
-                onNavigateToFavorites = {
-                    navController.navigate("favorites")
-                },
-                onNavigateToPurchases = {
-                    navController.navigate("purchases")
-                },
-                onNavigateToCategories = {
-                    navController.navigate("categories")
-                },
+                onNavigateToFavorites = { navController.navigate("favorites") },
+                onNavigateToPurchases = { navController.navigate("purchases") },
+                onNavigateToCategories = { navController.navigate("categories") },
                 onLogout = {
                     navController.navigate("login") {
                         popUpTo(0) { inclusive = true }
                     }
-                }
+                },
+                onNavigateToPublish = { navController.navigate("publish") },
+                onNavigateToMyProducts = { navController.navigate("myProducts") },
+                onNavigateToCart = { navController.navigate("cart") }
             )
         }
         composable("categories") {
@@ -146,10 +138,10 @@ fun MainNavigation() {
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToHome = { navController.navigate("home") { popUpTo("home") { inclusive = true } } },
                 onNavigateToPurchases = { navController.navigate("purchases") },
-                onNavigateToProfile = { navController.navigate("profile") }
+                onNavigateToProfile = { navController.navigate("profile") },
+                onNavigateToCart = { navController.navigate("cart") }
             )
         }
-
         composable("purchases") {
             PurchasesScreen(
                 onNavigateToDetail = { productId ->
@@ -158,16 +150,24 @@ fun MainNavigation() {
                 onNavigateToHome = {
                     navController.navigate("home") { popUpTo("home") { inclusive = true } }
                 },
-                onNavigateToProfile = {
-                    navController.navigate("profile")
-                },
-                onNavigateToFavorites = {
-                    navController.navigate("favorites")
-                },
+                onNavigateToProfile = { navController.navigate("profile") },
+                onNavigateToFavorites = { navController.navigate("favorites") },
                 onNavigateToPurchases = { },
-                onNavigateToCategories = {
-                    navController.navigate("categories")
-                }
+                onNavigateToCategories = { navController.navigate("categories") },
+                onNavigateToCart = { navController.navigate("cart") }
+            )
+        }
+        composable("cart") {
+            CartScreen(
+                onNavigateToDetail = { productId ->
+                    navController.navigate("productDetail/$productId")
+                },
+                onNavigateToHome = {
+                    navController.navigate("home") { popUpTo("home") { inclusive = true } }
+                },
+                onNavigateToProfile = { navController.navigate("profile") },
+                onNavigateToCategories = { navController.navigate("categories") },
+                onNavigateToCheckout = { navController.navigate("checkout") }
             )
         }
         composable(
@@ -178,43 +178,22 @@ fun MainNavigation() {
             ProductDetailScreen(
                 productId = productId,
                 onNavigateBack = { navController.popBackStack() },
-                onNavigateToFavorites = {
-                    navController.navigate("favorites")
-                },
-                onNavigateToProfile = {
-                    navController.navigate("profile")
-                },
-                onNavigateToAddress = { id ->
-                    navController.navigate("address/$id")
-                },
-                onNavigateToPurchases = {
-                    navController.navigate("purchases")
-                },
-                onNavigateToCategories = {
-                    navController.navigate("categories")
-                }
+                onNavigateToFavorites = { navController.navigate("favorites") },
+                onNavigateToProfile = { navController.navigate("profile") },
+                onNavigateToAddress = { navController.navigate("address") },
+                onNavigateToPurchases = { navController.navigate("purchases") },
+                onNavigateToCategories = { navController.navigate("categories") },
+                onNavigateToCart = { navController.navigate("cart") }
             )
         }
-        composable(
-            route = "address/{productId}",
-            arguments = listOf(navArgument("productId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val productId = backStackEntry.arguments?.getString("productId")
+        composable("address") {
             AddressScreen(
-                productId = productId,
-                onNavigateToCheckout = {
-                    navController.navigate("checkout/$productId")
-                },
+                onNavigateToCheckout = { navController.navigate("checkout") },
                 onNavigateBack = { navController.popBackStack() }
             )
         }
-        composable(
-            route = "checkout/{productId}",
-            arguments = listOf(navArgument("productId") { type = NavType.StringType })
-        ) { backStackEntry ->
-            val productId = backStackEntry.arguments?.getString("productId")
+        composable("checkout") {
             CheckoutScreen(
-                productId = productId,
                 onPurchaseSuccess = {
                     navController.navigate("purchases") {
                         popUpTo("home") { inclusive = false }
@@ -225,9 +204,43 @@ fun MainNavigation() {
                 onNavigateToProfile = { navController.navigate("profile") },
                 onNavigateToFavorites = { navController.navigate("favorites") },
                 onNavigateToPurchases = { navController.navigate("purchases") },
-                onNavigateToCategories = { navController.navigate("categories") }
+                onNavigateToCategories = { navController.navigate("categories") },
+                onNavigateToCart = { navController.navigate("cart") }
             )
         }
-
+        composable("publish") {
+            PublishProductScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onPublishSuccess = {
+                    navController.navigate("myProducts") {
+                        popUpTo("profile")
+                    }
+                }
+            )
+        }
+        composable("myProducts") {
+            MyProductsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onNavigateToEdit = { productId ->
+                    navController.navigate("editProduct/$productId")
+                },
+                onNavigateToPublish = { navController.navigate("publish") }
+            )
+        }
+        composable(
+            route = "editProduct/{productId}",
+            arguments = listOf(navArgument("productId") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val productId = backStackEntry.arguments?.getString("productId")
+            EditProductScreen(
+                productId = productId,
+                onNavigateBack = { navController.popBackStack() },
+                onSaved = {
+                    navController.navigate("myProducts") {
+                        popUpTo("myProducts") { inclusive = true }
+                    }
+                }
+            )
+        }
     }
 }

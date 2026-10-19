@@ -55,7 +55,8 @@ fun CategoriesScreen(
     onNavigateBack: () -> Unit = {},
     onNavigateToHome: () -> Unit = {},
     onNavigateToPurchases: () -> Unit = {},
-    onNavigateToProfile: () -> Unit = {}
+    onNavigateToProfile: () -> Unit = {},
+    onNavigateToCart: () -> Unit = {}
 ) {
     val categories = remember {
         listOf(
@@ -365,7 +366,7 @@ fun CategoriesScreen(
                     icon = { Icon(Icons.Outlined.ShoppingCart, contentDescription = null) },
                     label = { Text("Carrito", fontSize = 10.sp) },
                     selected = false,
-                    onClick = onNavigateToPurchases
+                    onClick = onNavigateToCart
                 )
                 NavigationBarItem(
                     icon = { Icon(Icons.Outlined.PlayCircle, contentDescription = null) },
